@@ -38,4 +38,8 @@ export class User {
   @Field()
   @Column()
   phoneNumber!: string;
+
+  @Field()
+  @Column({ default: false })
+  isVerified!: boolean;
 }

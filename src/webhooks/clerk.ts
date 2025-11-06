@@ -34,7 +34,10 @@ export const clerkWebhook = async (
     const firstName = u.first_name ?? "";
     const lastName = u.last_name ?? "";
     const name = `${firstName} ${lastName}`.trim();
-    const username = u.username ?? null;
+   const username =
+  u.username ??
+  u.email_addresses?.[0]?.email_address?.split("@")[0] ??
+  `user_${u.id.slice(-6)}`;
 
     // Metadata fields
     const dob = u.public_metadata?.dob ?? null;
@@ -55,7 +58,10 @@ export const clerkWebhook = async (
       );
     } catch (err: any) {
       // email exists but belongs to another user
-      if (err.code === "23505" && err.detail.includes("(email)")) {
+if (
+  err.code === "23505" &&
+  (err.detail.includes("(email)") || err.detail.includes("(username)"))
+) {
         logger.warn(`⚠️ Email exists, linking record instead: ${email}`);
 
         await repo.update(
