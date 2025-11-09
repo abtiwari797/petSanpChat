@@ -20,3 +20,33 @@ export class VerifyOtpResponse {
   @Field(() => String, { nullable: true })
   message?: string; // match your resolver
 }
+
+@ArgsType()
+export class ForgotPasswordArgs {
+  @Field()
+  email!: string;
+}
+
+@ArgsType()
+export class ResetPasswordArgs {
+  @Field()
+  email!: string;
+
+  @Field()
+  otp!: string;
+
+  @Field()
+  newPassword!: string;
+
+  @Field({ nullable: true })
+  type?: string; // optional, defaults to "password_reset"
+}
+
+@ArgsType()
+export class ChangePasswordArgs {
+  @Field({ nullable: true })
+  currentPassword?: string; // optional: we rely on session, include if you want extra verification
+
+  @Field()
+  newPassword!: string;
+}
