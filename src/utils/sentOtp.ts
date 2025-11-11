@@ -1,37 +1,23 @@
-import nodemailer from 'nodemailer';
-import dotenv from "dotenv";
-dotenv.config();
+// src/services/otp.service.ts
 
-// Generate a 6-digit OTP
-function generateOTP() {
+import { sendEmail } from "../utils/emailService";
+
+
+// src/utils/otpGenerator.ts
+export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Send OTP email
-export async function sendOTPEmail(recipientEmail: string) {
+export async function sendOTPEmail(email: string) {
   const otp = generateOTP();
 
-  // Store OTP in your DB or cache with expiration (not shown here)
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // or your SMTP provider
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER, // your email
-      pass: process.env.SMTP_PASS, // your app password
-    },
-  });
-
-  const mailOptions = {
-    from: '"Your App" <no-reply@yourapp.com>',
-    to: recipientEmail,
+  const payload = {
     subject: 'Your OTP Code',
     text: `Your OTP code is: ${otp}`,
     html: `<p>Your OTP code is: <strong>${otp}</strong></p>`,
   };
 
-await transporter.sendMail(mailOptions);
+  await sendEmail([email], payload);
 
   return otp;
 }

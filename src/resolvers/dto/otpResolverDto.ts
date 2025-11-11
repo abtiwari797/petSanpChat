@@ -8,9 +8,7 @@ export class VerifyOtpArgs {
 
   @Field()
   otp!: string;
-
-  @Field()
-  type!: string; // e.g., "signup_email_verification"
+// e.g., "signup_email_verification"
 }
 @ObjectType()
 export class VerifyOtpResponse {

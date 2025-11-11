@@ -1,0 +1,48 @@
+name: Create PR to waggszy-beep/petsnapchat-be
+
+on:
+  workflow_dispatch:        # run manually from Actions tab
+  push:
+    branches:
+      - main                # or whichever branch you want to sync from
+
+jobs:
+  create_pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout petSanpChat
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Clone target repository (petsnapchat-be)
+        env:
+          REPO2_PAT: ${{ secrets.REPO2_PAT }}
+        run: |
+          git clone https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git target-repo
+          rsync -av --exclude='.git' ./ target-repo/
+          cd target-repo
+
+          # Create a branch for this sync
+          BRANCH="sync-$(date +%s)"
+          git checkout -b $BRANCH
+
+          git add .
+          git commit -m "🔄 Sync updates from abtiwari797/petSanpChat on $(date)" || echo "No changes to commit"
+          git push https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git $BRANCH
+
+      - name: Create Pull Request on petsnapchat-be
+        env:
+          GH_TOKEN: ${{ secrets.REPO2_PAT }}
+        run: |
+          cd target-repo
+          gh pr create \
+            --repo waggszy-beep/petsnapchat-be \
+            --head $BRANCH \
+            --base main \
+            --title "Sync from abtiwari797/petSanpChat 🚀" \
+            --body "This PR was automatically created to sync the latest code from [abtiwari797/petSanpChat](https://github.com/abtiwari797/petSanpChat)."

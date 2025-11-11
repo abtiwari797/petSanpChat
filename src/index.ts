@@ -7,7 +7,7 @@ import { UserResolver } from "./resolvers/UserResolver";
 import { connectMongoDB } from "./config/mongodb";
 import { AppDataSource } from "./config/postgres";
 import { auth } from "./middleware/auth";
-import { clerkWebhook } from "./webhooks/clerk";
+
 import { logger } from "./utils/logger";
 import dotenv from "dotenv";
 dotenv.config();
@@ -23,14 +23,7 @@ logger.info(`✅ PostgreSQL connected`);
   const app = express();
 
   // ✅ Clerk Webhook must receive RAW body
-  app.post(
-    "/webhooks/clerk",
-    bodyParser.raw({ type: "application/json" }),
-    (req: any, res) => {
-      req.rawBody = req.body;
-      clerkWebhook(req, res);
-    }
-  );
+
 
   // ✅ Normal JSON for API & GraphQL
   app.use(bodyParser.json());

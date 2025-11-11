@@ -3,7 +3,7 @@ import { ObjectType, Field, ID } from "type-graphql";
 
 @ObjectType()
 @Entity()
-@Unique(["clerkId"])
+@Unique(["firebaseId"])
 @Unique(["email"])
 @Unique(["username"]) // ✅ new unique username
 export class User {
@@ -29,7 +29,7 @@ export class User {
 
   @Field()
   @Column({ unique: true })
-  clerkId!: string;
+  firebaseId!: string;
 
   @Field()
   @Column()
