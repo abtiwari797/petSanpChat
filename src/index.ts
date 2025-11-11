@@ -39,11 +39,12 @@ logger.info(`✅ PostgreSQL connected`);
   await server.start(); 
   server.applyMiddleware({ app });
 
-  const PORT = 4000;
-  app.listen(PORT, () => {
-    logger.info(`🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`);
-    logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
-  });
+const PORT = process.env.PORT || 4000; // ✅ Use Render-assigned port
+app.listen(PORT, () => {
+  logger.info(`🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`);
+  logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
+});
+
 }
 
 bootstrap();
