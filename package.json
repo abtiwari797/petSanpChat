@@ -3,9 +3,6 @@
         "dev": "nodemon --watch src --exec ts-node src/index.ts"
     },
     "dependencies": {
-        "@clerk/backend": "^2.20.0",
-        "@clerk/clerk-sdk-node": "^4.13.23",
-        "@ngrok/ngrok": "^1.5.2",
         "apollo-server": "^3.13.0",
         "axios": "^1.13.2",
         "firebase-admin": "^13.6.0",
