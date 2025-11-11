@@ -24,7 +24,7 @@ jobs:
           REPO2_PAT: ${{ secrets.REPO2_PAT }}
         run: |
           git clone https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git target-repo
-          rsync -av --exclude='.git' ./ target-repo/
+          rsync -av --exclude='.git' --exclude='.github/workflows' ./ target-repo/
           cd target-repo
 
           # Create a branch for this sync
