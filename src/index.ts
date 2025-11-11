@@ -6,7 +6,7 @@ import { buildSchema } from "type-graphql";
 import { UserResolver } from "./resolvers/UserResolver";
 import { connectMongoDB } from "./config/mongodb";
 import { AppDataSource } from "./config/postgres";
-import { auth } from "./middleware/auth";
+
 
 import { logger } from "./utils/logger";
 import dotenv from "dotenv";
@@ -30,10 +30,7 @@ logger.info(`✅ PostgreSQL connected`);
   // Apollo server setupS
   const server = new ApolloServer({
     schema,
-    context: async ({ req }) => {
-      const session = await auth(req);
-      return { session };
-    },
+    context: ({ req, res }) => ({ req, res }) ,
   });
 
   await server.start(); 
