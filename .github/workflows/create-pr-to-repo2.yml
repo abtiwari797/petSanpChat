@@ -1,10 +1,10 @@
 name: Create PR to waggszy-beep/petsnapchat-be
 
 on:
-  workflow_dispatch:        # run manually from Actions tab
+  workflow_dispatch:        # allows manual trigger
   push:
     branches:
-      - main                # or whichever branch you want to sync from
+      - main                # triggers on push to main
 
 jobs:
   create_pr:
@@ -27,13 +27,14 @@ jobs:
           rsync -av --exclude='.git' --exclude='.github/workflows' ./ target-repo/
           cd target-repo
 
-          # Create a branch for this sync
+          # Create a unique branch for the sync
           BRANCH="sync-$(date +%s)"
-          git checkout -b $BRANCH
+          echo "BRANCH_NAME=$BRANCH" >> $GITHUB_ENV  # ✅ store in GitHub env for later use
 
+          git checkout -b "$BRANCH"
           git add .
           git commit -m "🔄 Sync updates from abtiwari797/petSanpChat on $(date)" || echo "No changes to commit"
-          git push https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git $BRANCH
+          git push https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git "$BRANCH"
 
       - name: Create Pull Request on petsnapchat-be
         env:
@@ -42,7 +43,7 @@ jobs:
           cd target-repo
           gh pr create \
             --repo waggszy-beep/petsnapchat-be \
-            --head $BRANCH \
+            --head "${{ env.BRANCH_NAME }}" \
             --base main \
             --title "Sync from abtiwari797/petSanpChat 🚀" \
             --body "This PR was automatically created to sync the latest code from [abtiwari797/petSanpChat](https://github.com/abtiwari797/petSanpChat)."
