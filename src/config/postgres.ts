@@ -1,33 +1,33 @@
 import { DataSource } from "typeorm";
 import { User } from "../entities/User";
+import dotenv from "dotenv";
 
-if (process.env.NODE_ENV !== "Dev") {
-  require("dotenv").config();
-}
+dotenv.config();
 
-const isNeon = !!process.env.DATABASE_URL; // Detect Neon usage
+const isProduction = process.env.NODE_ENV === "production";
+const useNeon = !!process.env.DATABASE_URL; // ✅ true if Railway/Neon connection is used
 
 export const AppDataSource = new DataSource({
   type: "postgres",
 
-
-  ...(isNeon
+  ...(useNeon
     ? {
+        // ✅ Railway or Neon cloud DB
         url: process.env.DATABASE_URL,
         ssl: {
-          rejectUnauthorized: false, // ✅ Required for Neon
+          rejectUnauthorized: false, // Required for Neon/Railway SSL
         },
       }
     : {
+        // ✅ Local development fallback
         host: process.env.DB_HOST || "localhost",
-        port: Number(process.env.DB_PORT) || 5433,
+        port: Number(process.env.DB_PORT) || 5432,
         username: process.env.DB_USERNAME || "postgres",
         password: process.env.DB_PASSWORD || "Adarsh@1996",
         database: process.env.DB_NAME || "postgres",
       }),
 
   entities: [User],
-
-  synchronize: true, // ✅ Turn OFF in prod & use migrations
-  logging: true,
+  synchronize: true, // ❗ Turn off in production if you use migrations
+  logging: !isProduction, // less noisy logs in production
 });
