@@ -6,15 +6,15 @@ import { buildSchema } from "type-graphql";
 import { UserResolver } from "./resolvers/UserResolver";
 import { connectMongoDB } from "./config/mongodb";
 import { AppDataSource } from "./config/postgres";
-
-
 import { logger } from "./utils/logger";
 import dotenv from "dotenv";
+
 dotenv.config();
+
 async function bootstrap() {
   await connectMongoDB();
   await AppDataSource.initialize();
-logger.info(`✅ PostgreSQL connected`);
+  logger.info(`✅ PostgreSQL connected`);
 
   const schema = await buildSchema({
     resolvers: [UserResolver],
@@ -22,26 +22,26 @@ logger.info(`✅ PostgreSQL connected`);
 
   const app = express();
 
-  // ✅ Clerk Webhook must receive RAW body
-
-
-  // ✅ Normal JSON for API & GraphQL
-  app.use(bodyParser.json());
-  // Apollo server setupS
-  const server = new ApolloServer({
-    schema,
-    context: ({ req, res }) => ({ req, res }) ,
+  // ✅ Parse JSON for everything EXCEPT /graphql
+  app.use((req, res, next) => {
+    if (req.path === "/graphql") return next();
+    bodyParser.json()(req, res, next);
   });
 
-  await server.start(); 
+  // ✅ Apollo Server setup
+  const server = new ApolloServer({
+    schema,
+    context: ({ req, res }) => ({ req, res }),
+  });
+
+  await server.start();
   server.applyMiddleware({ app });
 
-const PORT = process.env.PORT || 4000; // ✅ Use Render-assigned port
-app.listen(PORT, () => {
-  logger.info(`🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`);
-  logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
-});
-
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    logger.info(`🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`);
+    logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
+  });
 }
 
 bootstrap();
