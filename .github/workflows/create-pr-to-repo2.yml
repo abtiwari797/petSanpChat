@@ -1,4 +1,4 @@
-name: Create PR to waggszy-beep/petsnapchat-be
+name: Create PR to petroastapp-ai/petSnapChat-be
 
 on:
   workflow_dispatch:        # allows manual trigger
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout petSanpChat
+      - name: Checkout source repository (petSnapChat)
         uses: actions/checkout@v4
 
       - name: Configure Git
@@ -19,31 +19,37 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Clone target repository (petsnapchat-be)
+      - name: Clone target repository (petSnapChat-be)
         env:
           REPO2_PAT: ${{ secrets.REPO2_PAT }}
         run: |
-          git clone https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git target-repo
+          # Clone the target backend repo using the fine-grained PAT
+          git clone https://x-access-token:${REPO2_PAT}@github.com/petroastapp-ai/petSnapChat-be.git target-repo
+
+          # Copy all files except .git and workflows
           rsync -av --exclude='.git' --exclude='.github/workflows' ./ target-repo/
+
           cd target-repo
 
-          # Create a unique branch for the sync
+          # Create a unique branch for sync
           BRANCH="sync-$(date +%s)"
-          echo "BRANCH_NAME=$BRANCH" >> $GITHUB_ENV  # ✅ store in GitHub env for later use
+          echo "BRANCH_NAME=$BRANCH" >> $GITHUB_ENV
 
           git checkout -b "$BRANCH"
           git add .
-          git commit -m "🔄 Sync updates from abtiwari797/petSanpChat on $(date)" || echo "No changes to commit"
-          git push https://x-access-token:${REPO2_PAT}@github.com/waggszy-beep/petsnapchat-be.git "$BRANCH"
+          git commit -m "🔄 Sync updates from abtiwari797/petSnapChat on $(date)" || echo "No changes to commit"
 
-      - name: Create Pull Request on petsnapchat-be
+          # Push new branch to target repo
+          git push https://x-access-token:${REPO2_PAT}@github.com/petroastapp-ai/petSnapChat-be.git "$BRANCH"
+
+      - name: Create Pull Request on petSnapChat-be
         env:
           GH_TOKEN: ${{ secrets.REPO2_PAT }}
         run: |
           cd target-repo
           gh pr create \
-            --repo waggszy-beep/petsnapchat-be \
+            --repo petroastapp-ai/petSnapChat-be \
             --head "${{ env.BRANCH_NAME }}" \
             --base main \
-            --title "Sync from abtiwari797/petSanpChat 🚀" \
-            --body "This PR was automatically created to sync the latest code from [abtiwari797/petSanpChat](https://github.com/abtiwari797/petSanpChat)."
+            --title "Sync from abtiwari797/petSnapChat 🚀" \
+            --body "This PR was automatically created to sync the latest code from [abtiwari797/petSnapChat](https://github.com/abtiwari797/petSnapChat)."
