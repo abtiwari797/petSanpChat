@@ -1,6 +1,6 @@
 import { getDBRepository } from "../db/repository";
 import { User } from "../entities/User";
-import { GoogleSignupArgs, SignupArgs } from "../resolvers/dto/userResolverDto";
+import { GoogleSignupArgs, SignupArgs, UserResponseDto } from "../resolvers/dto/userResolverDto";
 import { sendOTPEmail } from "../utils/sentOtp";
 import { UserOTP } from "../model/userOtpSchema";
 import admin from "../config/firebase";
@@ -326,12 +326,21 @@ export class UserService {
   /**
    * List all users from PostgreSQL
    */
-  async getUsers() {
+  async getUsers(): Promise<UserResponseDto[]>  {
     logger.info(`📊 Fetching all users from database`);
     try {
       const users = await this.userRepo.find();
       logger.info(`✅ Retrieved ${users.length} users`);
-      return users;
+      return users.map(user => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        username: user.username,
+        phoneNumber: user.phoneNumber,
+        dob: user.dob,
+        isVerified: user.isVerified,
+      }));
     } catch (error: any) {
       logger.error(`❌ Failed to fetch users: ${error.message}`, error);
       throw error;

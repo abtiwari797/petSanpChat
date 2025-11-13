@@ -1,5 +1,4 @@
 import { ArgsType, Field, ObjectType } from "type-graphql";
-
  
 @ArgsType()
 export class SignupArgs {
@@ -32,13 +31,42 @@ export class UserResponseDto {
      @Field(()=> String)
       id!: string;
 
-@Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   name?: string;
 
-@Field({ nullable: true })
-email?: string;
+  @Field(() => String, { nullable: true })
+  firstName?: string;
+
+  @Field(() => String, { nullable: true })
+  lastName?: string;
+
+  @Field(() => String, { nullable: true })
+  username?: string;
+
+  @Field(() => String, { nullable: true })
+  firebaseId?: string;
+
+  @Field(() => String, { nullable: true })
+  email?: string;
+
+  @Field(() => String, { nullable: true })
+  dob?: string;
+
+  @Field(() => String, { nullable: true })
+  phoneNumber?: string;
+
+  @Field(() => Boolean, { nullable: true })
+  isVerified?: boolean;
 }
 
+@ObjectType()
+export class CreateUserResponseDto {
+     @Field(()=> String)
+      message!: string;
+
+@Field({ nullable: true })
+success?: boolean;
+}
 
 
 @ArgsType()
@@ -63,7 +91,7 @@ export class LoginResponseDto {
   expiresAt?: string;
 
   @Field({ nullable: true })
-  uid?: string;
+  userId?: string;
 
   @Field({ nullable: true })
   email?: string;
@@ -95,7 +123,6 @@ export class RefreshTokenResponse {
 export class sendPasswordResetEmailResponse {
   @Field()
   message!: string;
-
 
 }
 

@@ -1,7 +1,7 @@
 // src/resolvers/UserResolver.ts
 import { Resolver, Query, Mutation, Args } from "type-graphql";
 import { UserService } from "../service/user.service";
-import { SignupArgs,UserResponseDto, LoginArgs, LoginResponseDto, RefreshTokenResponse, RefreshTokenArgs, sendPasswordResetEmailResponse, SendPasswordResetEmailArgs, GoogleSignupArgs } from "./dto/userResolverDto";
+import { SignupArgs,UserResponseDto, LoginArgs, LoginResponseDto, RefreshTokenResponse, RefreshTokenArgs, sendPasswordResetEmailResponse, SendPasswordResetEmailArgs, GoogleSignupArgs, CreateUserResponseDto } from "./dto/userResolverDto";
 import { UserOTP } from "../model/userOtpSchema";
 import { VerifyOtpArgs, VerifyOtpResponse } from "./dto/otpResolverDto";
 import { getDBRepository } from "../db/repository";
@@ -18,9 +18,7 @@ export class UserResolver {
   async getUsers(): Promise<UserResponseDto[]> {
     logger.info(`📊 Query: getUsers`);
     try {
-      const users = await this.userService.getUsers();
-      logger.info(`✅ Retrieved ${users.length} users`);
-      return users;
+      return await this.userService.getUsers();
     } catch (error: any) {
       logger.error(`❌ getUsers error: ${error.message}`, error);
       throw error;
@@ -32,12 +30,11 @@ export class UserResolver {
     logger.info(`🔐 Mutation: login for email: ${email}`);
     try {
       const result = await this.userService.login(email, password);
-      logger.info(`✅ Login successful for: ${email}`);
 
       return {
         idToken: result.idToken,
         refreshToken: result.refreshToken,
-        uid: result.uid,
+        userId: result.uid,
         email: result.email,
       };
     } catch (error: any) {
@@ -46,21 +43,20 @@ export class UserResolver {
     }
   }
 
-@Mutation(() => UserResponseDto)
-async createUser(@Args() User: SignupArgs): Promise<any> {
+@Mutation(() => CreateUserResponseDto)
+async createUser(@Args() User: SignupArgs): Promise<CreateUserResponseDto> {
   logger.info(`📝 Mutation: createUser for email: ${User.email}`);
   try {
-    const data = await this.userService.createUser(User);
-    logger.info(`✅ User created successfully: ${User.email}`);
-        return { success: true, message: "OTP verified successfully" };
+    await this.userService.createUser(User);
+    return {success:true, message:'User created successfully'};
   } catch (error: any) {
-    logger.error(`❌ createUser error for ${User.email}: ${error.message}`, error);
+    logger.info("Error creating user:", error);
     throw new Error(error?.message || "Internal Server Error");
   }
-}
+  }
 
 @Mutation(() => VerifyOtpResponse)
-async verifyOtpForSignup(
+  async verifyOtpForSignup(
   @Args() { email, otp }: VerifyOtpArgs
 ): Promise<VerifyOtpResponse> {
   logger.info(`🔍 Mutation: verifyOtpForSignup for email: ${email}`);
@@ -108,13 +104,10 @@ async verifyOtpForSignup(
 
 @Mutation(() => VerifyOtpResponse)
 async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpResponse> {
-  logger.info(`📧 Mutation: SendOtpForSignup for email: ${email}`);
   try {
     await this.userService.resendEmailVerificationOtp(email);
-    logger.info(`✅ OTP resent successfully to: ${email}`);
     return { success: true, message: "OTP sent successfully" };
   } catch (err: any) {
-    logger.error(`❌ SendOtpForSignup error for ${email}: ${err.message}`, err);
     return { success: false, message: err.message };
   }
 }
@@ -122,26 +115,22 @@ async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpRespo
 
   @Mutation(() => RefreshTokenResponse)
   async refreshToken(@Args() { refreshToken }: RefreshTokenArgs): Promise<RefreshTokenResponse> {
-    logger.info(`🔄 Mutation: refreshToken`);
     try {
       const result = await this.userService.refreshToken(refreshToken);
-      logger.info(`✅ Token refreshed successfully`);
       return result;
     } catch (err: any) {
-      logger.error(`❌ refreshToken error: ${err.message}`, err);
+      logger.error("Refresh token failed:", err.message);
       throw new Error(err.message || "Failed to refresh token");
     }
   }
 
   @Mutation(() => sendPasswordResetEmailResponse)
   async sendPasswordResetEmail(@Args() { email }: SendPasswordResetEmailArgs): Promise<sendPasswordResetEmailResponse> {
-    logger.info(`🔐 Mutation: sendPasswordResetEmail for: ${email}`);
     try {
-      const message = await this.userService.generatePasswordResetLink(email);
-      logger.info(`✅ Password reset email sent to: ${email}`);
-      return { message };
+     const message= await this.userService.generatePasswordResetLink(email);
+      return {message};
     } catch (err: any) {
-      logger.error(`❌ sendPasswordResetEmail error for ${email}: ${err.message}`, err);
+      console.error("Password reset error:", err);
       throw new Error(err.message || "Failed to send password reset email");
     }
   }
@@ -150,19 +139,12 @@ async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpRespo
   async signupWithGoogle(
     @Args() args: GoogleSignupArgs
   ): Promise<UserResponseDto> {
-    logger.info(`🔐 Mutation: signupWithGoogle`);
-    try {
-      const user: User = await this.userService.signupWithGoogle(args);
-      logger.info(`✅ Google signup successful for: ${user.email}`);
+    const user: User = await this.userService.signupWithGoogle(args);
 
-      return {
-        id: user.id,
-        name: user.firstName, // or user.name if you store full name
-        email: user.email,
-      };
-    } catch (error: any) {
-      logger.error(`❌ signupWithGoogle error: ${error.message}`, error);
-      throw error;
-    }
+    return {
+      id: user.id,
+      name: user.firstName, // or user.name if you store full name
+      email: user.email,
+    };
   }
 }
