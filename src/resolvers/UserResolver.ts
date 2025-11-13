@@ -1,7 +1,7 @@
 // src/resolvers/UserResolver.ts
 import { Resolver, Query, Mutation, Args } from "type-graphql";
 import { UserService } from "../service/user.service";
-import { SignupArgs,UserResponseDto, LoginArgs, LoginResponseDto, RefreshTokenResponse, RefreshTokenArgs, sendPasswordResetEmailResponse, SendPasswordResetEmailArgs, GoogleSignupArgs, CreateUserResponseDto } from "./dto/userResolverDto";
+import { SignupArgs,UserResponseDto, LoginArgs, LoginResponseDto, RefreshTokenResponse, RefreshTokenArgs, sendPasswordResetEmailResponse, SendPasswordResetEmailArgs, GoogleSignupArgs, CreateUserResponseDto, VerifyTokenArgs, VerifyTokenResponse } from "./dto/userResolverDto";
 import { UserOTP } from "../model/userOtpSchema";
 import { VerifyOtpArgs, VerifyOtpResponse } from "./dto/otpResolverDto";
 import { getDBRepository } from "../db/repository";
@@ -132,6 +132,18 @@ async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpRespo
     } catch (err: any) {
       console.error("Password reset error:", err);
       throw new Error(err.message || "Failed to send password reset email");
+    }
+  }
+
+  @Query(() => VerifyTokenResponse)
+  async verifyToken(@Args() { idToken }: VerifyTokenArgs): Promise<VerifyTokenResponse> {
+    logger.info(`🔍 Query: verifyToken`);
+    try {
+      const result = await this.userService.verifyToken(idToken);
+      return { uid: result.uid, email: result.email };
+    } catch (err: any) {
+      logger.error(`❌ verifyToken failed: ${err.message}`, err);
+      throw new Error(err.message || "Token verification failed");
     }
   }
 

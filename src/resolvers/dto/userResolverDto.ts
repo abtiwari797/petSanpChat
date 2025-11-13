@@ -144,3 +144,19 @@ export class GoogleSignupArgs {
   @Field()
   phoneNumber!: string;
 }
+
+
+@ArgsType()
+export class VerifyTokenArgs {
+  @Field()
+  idToken!: string;
+}
+
+@ObjectType()
+export class VerifyTokenResponse {
+  @Field()
+  uid!: string;
+
+  @Field({ nullable: true })
+  email?: string;
+}
