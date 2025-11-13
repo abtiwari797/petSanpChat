@@ -12,40 +12,52 @@ import dotenv from "dotenv";
 dotenv.config();
 
 async function bootstrap() {
-  await connectMongoDB();
-  await AppDataSource.initialize();
-  logger.info(`✅ PostgreSQL connected`);
+  try {
+    // ✅ Connect to MongoDB
+    await connectMongoDB();
 
-  const schema = await buildSchema({
-    resolvers: [UserResolver],
-  });
+    // ✅ Initialize PostgreSQL only if not already connected
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+      logger.info(`✅ PostgreSQL connected`);
+    } else {
+      logger.info(`ℹ️ PostgreSQL already initialized`);
+    }
 
-  const app = express();
+    // ✅ Build GraphQL schema
+    const schema = await buildSchema({
+      resolvers: [UserResolver],
+    });
 
-  // ✅ Parse JSON for everything EXCEPT /graphql
-  app.use((req, res, next) => {
-    if (req.path === "/graphql") return next();
-    bodyParser.json()(req, res, next);
-  });
+    const app = express();
 
-  // ✅ Apollo Server setup
+    // ✅ Parse JSON for everything EXCEPT /graphql
+    app.use((req, res, next) => {
+      if (req.path === "/graphql") return next();
+      bodyParser.json()(req, res, next);
+    });
 
-  const server = new ApolloServer({
-    schema,
-    introspection: true, // ✅ Allow GraphQL tools to load schema (important for prod testing)
-    context: ({ req, res }) => ({ req, res }),
-  });
+    // ✅ Apollo Server setup
+    const server = new ApolloServer({
+      schema,
+      introspection: true, // Allow GraphQL tools to load schema
+      context: ({ req, res }) => ({ req, res }),
+    });
 
-  await server.start();
-  server.applyMiddleware({ app });
+    await server.start();
+    server.applyMiddleware({ app });
 
-  const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () => {
-    logger.info(
-      `🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`
-    );
-    logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
-  });
+    const PORT = process.env.PORT || 4000;
+    app.listen(PORT, () => {
+      logger.info(
+        `🚀 GraphQL running at http://localhost:${PORT}${server.graphqlPath}`
+      );
+      logger.info("✅ Clerk webhook endpoint: POST /webhooks/clerk");
+    });
+  } catch (err) {
+    logger.error("❌ Server bootstrap failed:", err);
+    process.exit(1); // Exit if bootstrap fails
+  }
 }
 
 bootstrap();
