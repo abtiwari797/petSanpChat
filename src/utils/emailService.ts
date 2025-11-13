@@ -1,7 +1,11 @@
 // src/utils/emailService.ts
-import nodemailer from 'nodemailer';
+import sgMail, { MailDataRequired } from '@sendgrid/mail';
 import dotenv from 'dotenv';
+import { logger } from './logger';
+
 dotenv.config();
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
 
 interface EmailPayload {
   subject: string;
@@ -10,23 +14,29 @@ interface EmailPayload {
 }
 
 export async function sendEmail(recipients: string[], payload: EmailPayload) {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // or your SMTP provider
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER, // your email
-      pass: process.env.SMTP_PASS, // your app password
-    },
-  });
+  if (!payload.text && !payload.html) {
+    throw new Error("Email must have either text or html content");
+  }
 
-  const mailOptions = {
-    from: '"Your App" <no-reply@yourapp.com>',
-    to: recipients.join(','), // array to comma-separated string
+  // SendGrid expects a `content` array if using TypeScript
+  const msg: MailDataRequired = {
+    to: recipients, // array of emails
+    from: 'petroastapp@gmail.com', // must be verified in SendGrid
     subject: payload.subject,
-    text: payload.text,
-    html: payload.html,
+    content: [
+      {
+        type: payload.html ? 'text/html' : 'text/plain',
+        value: payload.html || payload.text || ''
+      }
+    ]
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    logger.info(`📧 Sending email to: ${recipients.join(', ')}. Subject: ${payload.subject}`);
+    const response = await sgMail.send(msg);
+    logger.info(`✅ Email sent to ${recipients.join(', ')} - status: ${response[0].statusCode}`);
+  } catch (err: any) {
+    logger.error(`❌ Failed to send email to ${recipients.join(', ')}: ${err.message || err}`, err);
+    throw err;
+  }
 }

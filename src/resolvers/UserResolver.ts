@@ -52,7 +52,7 @@ async createUser(@Args() User: SignupArgs): Promise<any> {
   try {
     const data = await this.userService.createUser(User);
     logger.info(`✅ User created successfully: ${User.email}`);
-    return data;
+        return { success: true, message: "OTP verified successfully" };
   } catch (error: any) {
     logger.error(`❌ createUser error for ${User.email}: ${error.message}`, error);
     throw new Error(error?.message || "Internal Server Error");

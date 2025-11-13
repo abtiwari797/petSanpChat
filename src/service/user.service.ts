@@ -66,7 +66,7 @@ export class UserService {
       const ttlMinutes = 10;
       const expireAt = Date.now() + ttlMinutes * 60 * 1000;
 
-      await this.userOTPRepo.create({
+      await UserOTP.create({
         userId: email,
         type: "signup_email_verification",
         otp,
@@ -90,13 +90,7 @@ export class UserService {
       await this.userRepo.save(user);
       logger.info(`✅ User saved to PostgreSQL successfully`);
 
-      return {
-        uid: userRecord.uid,
-        email: userRecord.email!,
-        displayName: userRecord.displayName!,
-        verificationLink,
-        otp, // optional: for testing
-      };
+      return { user, verificationLink  };
     } catch (error: any) {
       logger.error(`❌ Signup error for ${email}: ${error.message}`, error);
       throw error;

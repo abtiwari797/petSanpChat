@@ -5,6 +5,7 @@
     "dev": "nodemon --watch src --exec ts-node src/index.ts"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "apollo-server": "^3.13.0",
     "apollo-server-express": "^3.13.0",
     "axios": "^1.13.2",
