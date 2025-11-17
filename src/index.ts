@@ -7,6 +7,7 @@ import { UserResolver } from "./resolvers/UserResolver";
 import { connectMongoDB } from "./config/mongodb";
 import { AppDataSource } from "./config/postgres";
 import { logger } from "./utils/logger";
+import { authContext } from "./middleware/authContext";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -41,7 +42,7 @@ async function bootstrap() {
     const server = new ApolloServer({
       schema,
       introspection: true, // Allow GraphQL tools to load schema
-      context: ({ req, res }) => ({ req, res }),
+      context: ({ req, res }) => authContext({ req, res }),
     });
 
     await server.start();

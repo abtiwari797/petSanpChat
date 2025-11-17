@@ -1,19 +1,41 @@
 // src/resolvers/UserResolver.ts
-import { Resolver, Query, Mutation, Args } from "type-graphql";
+import { Resolver, Query, Mutation, Args, Ctx } from "type-graphql";
 import { UserService } from "../service/user.service";
-import { SignupArgs,UserResponseDto, LoginArgs, LoginResponseDto, RefreshTokenResponse, RefreshTokenArgs, sendPasswordResetEmailResponse, SendPasswordResetEmailArgs, GoogleSignupArgs, CreateUserResponseDto, VerifyTokenArgs, VerifyTokenResponse } from "./dto/userResolverDto";
+import {
+  SignupArgs,
+  UserResponseDto,
+  LoginArgs,
+  LoginResponseDto,
+  RefreshTokenResponse,
+  RefreshTokenArgs,
+  GoogleSignupArgs,
+  CreateUserResponseDto,
+  VerifyTokenArgs,
+  VerifyTokenResponse,
+  BaseResponse,
+  SendPasswordResetEmailArgs,
+  UserDetailsResponse,
+  LoginResponse,
+  VerifyTokenFullResponse,
+  sendPasswordResetEmailResponse,
+  UpdateProfileInput,
+} from "./dto/userResolverDto";
 import { UserOTP } from "../model/userOtpSchema";
 import { VerifyOtpArgs, VerifyOtpResponse } from "./dto/otpResolverDto";
 import { getDBRepository } from "../db/repository";
 import { User } from "../entities/User";
 import { logger } from "../utils/logger";
-
+import ApiResponse from "../utils/response";
+import { ErrorResponse, HttpStatusCodes, responseMessage } from "../utils/constant";
+import { STATUS_CODES } from "http";
+import { CustomGraphQLError } from "../utils/utils";
+import { UserContext } from "../middleware/authContext";
 
 @Resolver()
 export class UserResolver {
   private userService = new UserService();
   private userRepo = getDBRepository(User);
-  
+
   @Query(() => [UserResponseDto])
   async getUsers(): Promise<UserResponseDto[]> {
     logger.info(`📊 Query: getUsers`);
@@ -25,96 +47,134 @@ export class UserResolver {
     }
   }
 
-  @Mutation(() => LoginResponseDto)
-  async login(@Args() { email, password }: LoginArgs): Promise<LoginResponseDto> {
+@Query(() => UserDetailsResponse) // single object
+async getUsersDetails(@Ctx() ctx: any): Promise<UserDetailsResponse> {
+  logger.info(`📊 Query: getUsersDetails`);
+  try {
+    const currentUser = ctx?.currentUser;
+    if (!currentUser) throw new Error("Unauthorized");
+
+    const userDto: UserResponseDto = {
+      id: currentUser.id!,
+      firstName: currentUser.firstName || "",
+      lastName: currentUser.lastName || "",
+      name: `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim(),
+      email: currentUser.email || "",
+      username: currentUser.username || "",
+      firebaseId: currentUser.firebaseId || "",
+      dob: currentUser.dob || "",
+      phoneNumber: currentUser.phoneNumber || "",
+      isVerified: currentUser.isVerified || false,
+    };
+
+    return ApiResponse.success([userDto], "User details fetched successfully");
+  } catch (error: any) {
+    logger.error(`❌ getUsersDetails error: ${error.message}`, error);
+    return ApiResponse.error("Internal Server Error", 500);
+  }
+}
+
+
+  @Mutation(() => LoginResponse)
+  async login(@Args() { email, password }: LoginArgs): Promise<LoginResponse> {
     logger.info(`🔐 Mutation: login for email: ${email}`);
     try {
       const result = await this.userService.login(email, password);
 
-      return {
+      const data = {
         idToken: result.idToken,
         refreshToken: result.refreshToken,
         userId: result.uid,
         email: result.email,
       };
+      return ApiResponse.success(data, responseMessage.UserLoginSuccess);
     } catch (error: any) {
-      logger.error(`❌ Login mutation error for ${email}: ${error.message}`, error);
-      throw new Error(error?.message || "Login failed");
+      logger.error(
+        `❌ Login mutation error for ${email}: ${error.message}`,
+        error
+      );
+      return ApiResponse.error(error.message || ErrorResponse.INTERNAL_SERVER_ERROR, 500);
     }
   }
 
-@Mutation(() => CreateUserResponseDto)
-async createUser(@Args() User: SignupArgs): Promise<CreateUserResponseDto> {
-  logger.info(`📝 Mutation: createUser for email: ${User.email}`);
-  try {
-    await this.userService.createUser(User);
-    return {success:true, message:'User created successfully'};
-  } catch (error: any) {
-    logger.info("Error creating user:", error);
-    throw new Error(error?.message || "Internal Server Error");
-  }
+  @Mutation(() => CreateUserResponseDto)
+  async createUser(@Args() User: SignupArgs): Promise<CreateUserResponseDto> {
+    logger.info(`📝 Mutation: createUser for email: ${User.email}`);
+    try {
+      await this.userService.createUser(User);
+      return ApiResponse.success(undefined, responseMessage.OtpSendSuccess);
+    } catch (error: any) {
+      logger.info("Error creating user:", error);
+      return ApiResponse.error(error?.message || "Internal Server Error", 500);
+    }
   }
 
-@Mutation(() => VerifyOtpResponse)
+  @Mutation(() => VerifyOtpResponse)
   async verifyOtpForSignup(
-  @Args() { email, otp }: VerifyOtpArgs
-): Promise<VerifyOtpResponse> {
-  logger.info(`🔍 Mutation: verifyOtpForSignup for email: ${email}`);
-  try {
-    // Find OTP record
-    const type = 'signup_email_verification'
-    logger.info(`📊 Looking up OTP record for: ${email}`);
-    const record = await UserOTP.findOne({ userId: email, otp, type });
-    if (!record) {
-      logger.warn(`⚠️ Invalid OTP for: ${email}`);
-      return { success: false, message: "Invalid OTP" };
-    }
+    @Args() { email, otp }: VerifyOtpArgs
+  ): Promise<VerifyOtpResponse> {
+    logger.info(`🔍 Mutation: verifyOtpForSignup for email: ${email}`);
+    try {
+      // Find OTP record
+      const type = "signup_email_verification";
+      logger.info(`📊 Looking up OTP record for: ${email}`);
+      const record = await UserOTP.findOne({ userId: email, otp, type });
+      if (!record) {
+        logger.warn(`⚠️ Invalid OTP for: ${email}`);
+        return ApiResponse.error("Invalid OTP", 400);
+      }
 
-    // Check if expired
-    const now = Date.now();
-    if (record.expireAt < now) {
-      logger.warn(`⚠️ OTP expired for: ${email}`);
-      // Delete expired OTP
+      // Check if expired
+      const now = Date.now();
+      if (record.expireAt < now) {
+        logger.warn(`⚠️ OTP expired for: ${email}`);
+        // Delete expired OTP
+        await UserOTP.deleteOne({ _id: record._id });
+        return ApiResponse.error("OTP expired", 410);
+      }
+
+      // OTP is valid, delete record
+      logger.info(`✅ OTP valid, deleting record`);
       await UserOTP.deleteOne({ _id: record._id });
-      return { success: false, message: "OTP expired" };
+
+      // ✅ Update user in PostgreSQL
+      logger.info(`💾 Updating user verification status in PostgreSQL`);
+      const user = await this.userRepo.findOne({ where: { email: email } });
+      if (!user) {
+        logger.error(`❌ User not found: ${email}`);
+        return ApiResponse.error("User not found", 404);
+      }
+
+      user.isVerified = true;
+      await this.userRepo.save(user);
+      logger.info(`✅ User email verified: ${email}`);
+
+      return ApiResponse.success(undefined, "OTP verified successfully");
+    } catch (error: any) {
+      logger.error(
+        `❌ verifyOtpForSignup error for ${email}: ${error.message}`,
+        error
+      );
+      return ApiResponse.error(error?.message || "Internal Server Error", 500);
     }
+  }
 
-    // OTP is valid, delete record
-    logger.info(`✅ OTP valid, deleting record`);
-    await UserOTP.deleteOne({ _id: record._id });
-
-    // ✅ Update user in PostgreSQL
-    logger.info(`💾 Updating user verification status in PostgreSQL`);
-    const user = await this.userRepo.findOne({ where: { email: email } });
-    if (!user) {
-      logger.error(`❌ User not found: ${email}`);
-      return { success: false, message: "User not found" };
+  @Mutation(() => VerifyOtpResponse)
+  async SendOtpForSignup(
+    @Args() { email }: sendPasswordResetEmailResponse
+  ): Promise<VerifyOtpResponse> {
+    try {
+      await this.userService.resendEmailVerificationOtp(email);
+      return ApiResponse.success(undefined, "OTP sent successfully");
+    } catch (err: any) {
+      return ApiResponse.error(err.message || "Failed to send OTP", 500);
     }
-
-    user.isVerified = true;
-    await this.userRepo.save(user);
-    logger.info(`✅ User email verified: ${email}`);
-
-    return { success: true, message: "OTP verified successfully" };
-  } catch (error: any) {
-    logger.error(`❌ verifyOtpForSignup error for ${email}: ${error.message}`, error);
-    throw error;
   }
-}
-
-@Mutation(() => VerifyOtpResponse)
-async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpResponse> {
-  try {
-    await this.userService.resendEmailVerificationOtp(email);
-    return { success: true, message: "OTP sent successfully" };
-  } catch (err: any) {
-    return { success: false, message: err.message };
-  }
-}
-
 
   @Mutation(() => RefreshTokenResponse)
-  async refreshToken(@Args() { refreshToken }: RefreshTokenArgs): Promise<RefreshTokenResponse> {
+  async refreshToken(
+    @Args() { refreshToken }: RefreshTokenArgs
+  ): Promise<RefreshTokenResponse> {
     try {
       const result = await this.userService.refreshToken(refreshToken);
       return result;
@@ -124,30 +184,39 @@ async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpRespo
     }
   }
 
-  @Mutation(() => sendPasswordResetEmailResponse)
-  async sendPasswordResetEmail(@Args() { email }: SendPasswordResetEmailArgs): Promise<sendPasswordResetEmailResponse> {
+  @Mutation(() => BaseResponse)
+  async sendPasswordResetEmail(
+    @Args() { email }: SendPasswordResetEmailArgs
+  ): Promise<BaseResponse> {
     try {
-     const message= await this.userService.generatePasswordResetLink(email);
-      return {message};
+      await this.userService.generatePasswordResetLink(email);
+      const message = responseMessage.sendPasswordResetEmail;
+      return ApiResponse.success(undefined, message);
     } catch (err: any) {
       console.error("Password reset error:", err);
-      throw new Error(err.message || "Failed to send password reset email");
+      return ApiResponse.error(ErrorResponse.INTERNAL_SERVER_ERROR, 500);
     }
   }
-
-  @Query(() => VerifyTokenResponse)
-  async verifyToken(@Args() { idToken }: VerifyTokenArgs): Promise<VerifyTokenResponse> {
+  @Query(() => VerifyTokenFullResponse)
+  async verifyToken(
+    @Args() { idToken }: VerifyTokenArgs
+  ): Promise<VerifyTokenFullResponse> {
     logger.info(`🔍 Query: verifyToken`);
     try {
       const result = await this.userService.verifyToken(idToken);
-      return { uid: result.uid, email: result.email };
+      const data = { uid: result.uid, email: result.email };
+      return ApiResponse.success(data, responseMessage.refreshToken);
     } catch (err: any) {
       logger.error(`❌ verifyToken failed: ${err.message}`, err);
-      throw new Error(err.message || "Token verification failed");
+      // ⚠️ Must return here
+      return ApiResponse.error(
+        err.message || responseMessage.failRefreshToken,
+        500
+      );
     }
   }
 
-    @Mutation(() => UserResponseDto)
+  @Mutation(() => UserResponseDto)
   async signupWithGoogle(
     @Args() args: GoogleSignupArgs
   ): Promise<UserResponseDto> {
@@ -159,4 +228,36 @@ async SendOtpForSignup(@Args() { email }: VerifyOtpArgs): Promise<VerifyOtpRespo
       email: user.email,
     };
   }
+
+    @Mutation(() => UserDetailsResponse)
+  async updateProfile(
+    @Args() args: UpdateProfileInput, @Ctx() ctx: { currentUser: UserContext | null }
+  ): Promise<UserDetailsResponse> {
+  const loginUser = ctx.currentUser;
+     if (!loginUser || !loginUser.isVerified){
+      throw new CustomGraphQLError("Unauthorized",HttpStatusCodes.UNAUTHORIZED);
+    }
+
+    const updateUser: UserResponseDto = await this.userService.updateProfile(loginUser.id,args);
+
+    const userDto: UserResponseDto = {
+      id: updateUser.id!,
+      firstName: updateUser.firstName || "",
+      lastName: updateUser.lastName || "",
+      name: `${updateUser.firstName || ""} ${updateUser.lastName || ""}`.trim(),
+      email: updateUser.email || "",
+      username: updateUser.username || "",
+      firebaseId: updateUser.firebaseId || "",
+      dob: updateUser.dob || "",
+      phoneNumber: updateUser.phoneNumber || "",
+      isVerified: updateUser.isVerified || false,
+    };
+
+    return ApiResponse.success([userDto], "User details fetched successfully");
+  } catch (error: any) {
+    logger.error(`❌ getUsersDetails error: ${error.message}`, error);
+    return ApiResponse.error("Internal Server Error", 500);
+  }
 }
+
+

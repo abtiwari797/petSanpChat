@@ -1,5 +1,6 @@
 // src/resolvers/dto/otpResolverDto.ts
 import { ArgsType, Field, ObjectType } from "type-graphql";
+import { BaseResponse } from "./userResolverDto";
 
 @ArgsType()
 export class VerifyOtpArgs {
@@ -11,10 +12,4 @@ export class VerifyOtpArgs {
 // e.g., "signup_email_verification"
 }
 @ObjectType()
-export class VerifyOtpResponse {
-  @Field(() => Boolean)
-  success!: boolean; // match your resolver
-
-  @Field(() => String, { nullable: true })
-  message?: string; // match your resolver
-}
+export class VerifyOtpResponse extends BaseResponse {}

@@ -1,4 +1,18 @@
 import { ArgsType, Field, ObjectType } from "type-graphql";
+
+@ObjectType()
+export class BaseResponse {
+
+
+  @Field(() => Boolean,{ nullable: true })
+  status?: boolean;
+
+  @Field(() => Number,{ nullable: true })
+  code?: number;
+
+  @Field(() => String, { nullable: true })
+  message?: string;
+}
  
 @ArgsType()
 export class SignupArgs {
@@ -27,7 +41,7 @@ export class SignupArgs {
 
     
 @ObjectType()
-export class UserResponseDto {
+export class UserResponseDto  {
      @Field(()=> String)
       id!: string;
 
@@ -59,14 +73,8 @@ export class UserResponseDto {
   isVerified?: boolean;
 }
 
-@ObjectType()
-export class CreateUserResponseDto {
-     @Field(()=> String)
-      message!: string;
 
-@Field({ nullable: true })
-success?: boolean;
-}
+
 
 
 @ArgsType()
@@ -119,18 +127,19 @@ export class RefreshTokenResponse {
   email?: string;
 }
 
-@ObjectType()
-export class sendPasswordResetEmailResponse {
-  @Field()
-  message!: string;
-
-}
-
 @ArgsType()
 export class SendPasswordResetEmailArgs {
   @Field()
   email!: string;
 }
+
+@ArgsType()
+export class sendPasswordResetEmailResponse extends BaseResponse {
+  @Field()
+  email!: string;
+}
+
+
 
 
 @ArgsType()
@@ -159,4 +168,45 @@ export class VerifyTokenResponse {
 
   @Field({ nullable: true })
   email?: string;
+}
+
+
+@ObjectType()
+export class UserDetailsResponse extends BaseResponse {
+  @Field(() => [UserResponseDto], { nullable: true })
+  data?: UserResponseDto[]; // or single UserResponseDto
+}
+
+@ObjectType()
+export class CreateUserResponseDto extends BaseResponse {
+  @Field(() => UserResponseDto, { nullable: true })
+  data?: UserResponseDto;
+}
+
+@ObjectType()
+export class LoginResponse extends BaseResponse {
+ @Field(() => LoginResponseDto, { nullable: true })
+  data?: LoginResponseDto;
+}
+
+@ObjectType()
+export class VerifyTokenFullResponse extends BaseResponse {
+  @Field(() => VerifyTokenResponse, { nullable: true })
+  data?: VerifyTokenResponse;
+}
+
+
+@ArgsType()
+export class UpdateProfileInput {
+  @Field(() => String, { nullable: true })
+  firstName?: string;
+
+  @Field(() => String, { nullable: true })
+  lastName?: string;
+
+  @Field(() => String, { nullable: true })
+  dob?: string;
+
+  @Field(() => String, { nullable: true })
+  phoneNumber?: string;
 }
