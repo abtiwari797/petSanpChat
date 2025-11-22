@@ -2,19 +2,20 @@ import admin from "firebase-admin";
 import * as dotenv from "dotenv";
 dotenv.config();
 
+
 const serviceAccount = {
   type: "service_account",
-  projectId: "petsnapchat-188ad",           // camelCase
-  privateKeyId: "a39ab3e56db9bfe213bba038381ebf1d0ee3c27d",
-  privateKey:  "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCHSbOcEJh1jgOe\nQ98jvjQLG5cUiB6EBdwgxzcjV0ysTC27zHrRiBacqdafEqhc1+2AYP0r+/H8cpHV\nUF5hYyOzI5GY3JE4hnBxnugzTD5xAJCnM/9wBZD9zDnSHUKCpMSYIIL+gJPfOe6K\naLS3mFrUSVY2aTL4eUhfTBXYOoq9uRboLlCwd8FzCtVfgqt+x0NpVcRV+2Bb9slX\n76h/fNIhOc656WDvQWZcrxc8PjygK8U8cbQK022lzC+PsqR5LeZpmikpgOQttvYi\nVRbdBci/H0zjXObEQW4TYAsfKhZzRZbg4gAodJ/NuoINyvQ5SyHyMIl71LRFeYba\nF4nop9xDAgMBAAECggEAAnb7SLqcrHeb5URDSnlqpVEpXXxlYe5hZk9616/9e54f\nry44hpy+HLiTam6Clr5wW0hpFGYQsJK9yW8faRLPUbIyMuDB3I/GeKt2e4jGEnT6\nLbGq07WmQJl57DQQRCUQV90vxcc96nE5wVfLAxVJglibs34TKae8A9B1DW1znaU8\n13q73hb62/fcswvOgmF6+Sz3RUhm1sPbuCak8H7Y6BfMWB5hfUilbVJUzDaAwH4Z\nx+mJqyNx3WLguj5yZ7pnjSd8U+QN7oPtXlksBvw4JNP2KWjC0YV/hSND8HRLX8rj\nCtM4sLMIuV0BmMbrm0iNW0H42sgd8Z/cBJXW9StK0QKBgQC8h9m+V2bsD205edXz\nRtfPdEKj4bR9YR1bL7yq4EBfu97gZzoXkdHK7IbVyvLWF1Ab+uzTjauu8EKn+lDt\nNIfUpTvYPMUlEc1RBbQ5yXQa22K3C0hFHUNDl4Rw94HxqKVxU/qDFOqt3i3zsbg6\npM4RgSPGA142Rs2eb0z0Ccb9nwKBgQC3tAoZPyfJLdwSe6Zh/ML+wFgR0kG2/bOX\nUiUI9J18fFwfp28Mi7fsfYCQp+dH4CcSvZdn2RxheqGExSgdt2V5NH6WhpgxerXI\npN/RdwASAbsWMYESXnS5JDZHdF0jfIaq+OhzOwxtWRgkfWjVaLc+yz57RMwZR5yM\nIKM7mqTW3QKBgQCYAJPfMgrKUpnGmGOWdEy1d0/vX5+s4urPRUrBHnLofMlydefR\nbwENsev4XVuynzM4i/P7kSKVtiKX2mr7BLprCRmZ+00b2SGHrKilWrYgnTcWy6Lm\nDnTX/0aJ6hQ7qbRSDdpRa0DXE+ZKr8QQjCWU2WDlWnvQGP/ZOHV74JIukwKBgCDt\naX36/wOlb7P0a+9WYhFNoruXB2ZodR9jfvXq+quMkuqtlU8XYCFIoZnMLr2IZRiL\n2S6pENg8JeVpfXZOICcojKQoffEogJr1SpT+Eoonu0QQHYWQXrWs0vnd1q/8qxrM\nQMYeyGx1MsmfnQHbojTkM0/fFgJV/q5zTy7o2jEVAoGASWZNlXVUD05SaVs1NQhk\nGINb7Wln3T7G5B/rNr8XQigMhiFOQGoDdGLMGGeZzn1mswRQHwuFAIi/nBcXqFHL\nBp3VU/P/6Q2+/zoJXXu/BUDd88CTr9IDR+yNoJVFYR1978cnrxLogRdC1HMCeRUm\nse/X8GWV3CQq9VhPZaeacVo=\n-----END PRIVATE KEY-----\n",
-   clientEmail: "firebase-adminsdk-fbsvc@petsnapchat-188ad.iam.gserviceaccount.com",
-  clientId: "113579521094223818716",
+  projectId: "petsnap-12335",
+  privateKeyId: "fe19c39f2a33a682613b2819f2a455fabb8d0932",
+  privateKey: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDfyqkdCslNMOOp\n2vF9ZA+G54fNnbzcTNJLD2II/uGiYzSFa37xPLVa9V/0XktvG5v0YAciDHRn1kY2\nawYS2GiCmFm1StrI/WRVPfRJCLt/9+JwmOcWPTGGyfaYGPefd76JoI0yBWXow4XF\nLwTm8NAoJ9FS/UUMqlxgC5GVyShFXXG9H1UoWDSbEKRixSZ9+d+T7Ih7OfJAfCWc\n/HgrsqDX2rJO272R0UDSONhEBK0AjvkfAAVcIM2shaGaVyIENuByjoPAXlZyUbx4\nVvSYfAE0DkE2qw1lllQ0DtV2dWt7/eWs/7iumqEl1umRyi3//VH+klX2n69s9XGy\nbToKwf5VAgMBAAECggEAEZ3beCzMMeZiVZGlpvBEhKMfPqFnJ5RojX4Vgo3F50mV\n7dbLdGQKBrIALrVpjMKIoVEZ3qVKWI42krwUC1G70GP709ijpmTEDC3HWCR21hkG\nW0S+FDMW/fxSDCETBRuhBSZ9Vu2z2wHhOud7pE5apH6V7MmBMQEMKodem4LtR6Bw\nySOBaOLYYMbV1OemfilNke72pOLt+2KJdD04UHtkP7aqQAAN45MRGVXQ6em/+FTR\nOSWYtr61TaE89KJau8j1Dts0Rd+w2V39ADnhMNZjc0hE9SJkS/dvPHz3X/MSKrO/\n/gjYGOfV7cizVZRd9MSifq6AXtsyDwgAQ1vLvCwXQQKBgQD4PTfnASV3q3/mZYJ2\n+p+de3qhvCmbFy20kexrQUhDRtBCzJdQM6GiOgRz6BNzRIokw9Uz3QoZFyO3MPd0\n210tyfjuQKZta7zcrS08G/IxvG5Mf2q2vM20j3Cugd9RqoLsJa75K6OcinMRH2JM\nGzMdhNbVOaZK9hLe1OTtmvVuZQKBgQDmycbZ3PN08/ie1u2p0N9O4uBU0MAbstU5\nFKfqfiejIaTDChFScQtpYTpI4cohEXqBY894m0DIUPn6ZXAuqocvK1/8XInGiRh0\nGmpOzjyu+y/MWmQk65aYNB1XF8u8ikbjAsh6v3Udoqc58LVqP5GfceRwPvSuvL/4\n+DnkIgAZMQKBgQDa+JVhTh+QylVOFOjarwUxU4S/Ok2xIucMS1Qy4CkwPzziT7qB\n4qmHgon+/A58NU9uUti0oRyROVol9Cm0iPROucS91YV5K/oy5wfp5/TibocVL6gg\nfbcuuQD6zlEBptlKGYuY/CecpHwP9JEu9SdHuLAQ8oN/yESpDz7JYVFyCQKBgA4K\nSnmoknsT+JUZOD4zgdJXxRQD2xwURhqB4jFG2Xx4KIDhFOqyC+KuUpBqhBR87rn+\na3nH4CoPmxWbpDaCk1TQS7ebnZohbwZpMPx4WYK/r0m8WglQ98lsqjhJL1DaDLP0\n0GN/UE2sPoYs2ayMD3zmveICQnp66ybnWwZA90aRAoGAAxhGE+GqodFK+uyXcXg8\nqRd4v4DDBzwKEkcQeRmeZe9LrsAr4Ng5FTmKOPCQGC8N42lMnZ6c6DNA2nFqMOja\nERV26f2EDoQL3uh5WJvLX/hQxXvyYZGoyx71+oQfbI1U56Q3bgs5zv8aKsqm1brC\nQFLJmhHRV7gKsPtNOTru/nQ=\n-----END PRIVATE KEY-----\n",
+  clientEmail: "firebase-adminsdk-fbsvc@petsnap-12335.iam.gserviceaccount.com",
+  clientId: "101175382290156869628",
   authUri: "https://accounts.google.com/o/oauth2/auth",
   tokenUri: "https://oauth2.googleapis.com/token",
   authProviderX509CertUrl: "https://www.googleapis.com/oauth2/v1/certs",
-  clientX509CertUrl: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40petsnapchat-188ad.iam.gserviceaccount.com",
+  clientX509CertUrl: "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40petsnap-12335.iam.gserviceaccount.com",
   universeDomain: "googleapis.com"
-};
+};;
 
 
 

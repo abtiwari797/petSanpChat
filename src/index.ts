@@ -43,6 +43,7 @@ async function bootstrap() {
       schema,
       introspection: true, // Allow GraphQL tools to load schema
       context: ({ req, res }) => authContext({ req, res }),
+      persistedQueries: false
     });
 
     await server.start();
