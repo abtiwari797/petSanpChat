@@ -11,6 +11,7 @@ import { OAuth2Client } from "google-auth-library";
 import { UserOTPRepository } from "../repository/UserOTPRepository";
 import { logger } from "../utils/logger";
 import { HttpStatusCodes } from "../utils/constant";
+import { TemplateService } from "../utils/templateService";
 
 dotenv.config();
 
@@ -135,7 +136,11 @@ export class UserService {
     logger.info(`🔐 Generating password reset link for: ${email}`);
     try {
       const resetLink = await admin.auth().generatePasswordResetLink(email);
-      await sendEmail([email], { subject: "Password Reset Request", text: `Click the link: ${resetLink}`, html: `<a href="${resetLink}">${resetLink}</a>` });
+      const restLinkTemplate = await TemplateService.renderTemplate("petsnapchat_password_reset", {
+  USERNAME: "John Doe",
+  RESET_LINK: resetLink
+});
+      await sendEmail([email], { subject: restLinkTemplate.subject, text: restLinkTemplate.text, html: restLinkTemplate.html });
       return "Password reset link sent to email";
     } catch (err: any) {
       logger.error(`❌ Password reset failed for ${email}: ${err.message}`, err);

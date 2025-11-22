@@ -23,12 +23,14 @@ export async function sendEmail(recipients: string[], payload: EmailPayload) {
     to: recipients, // array of emails
     from: 'petroastapp@gmail.com', // must be verified in SendGrid
     subject: payload.subject,
-    content: [
-      {
-        type: payload.html ? 'text/html' : 'text/plain',
-        value: payload.html || payload.text || ''
-      }
-    ]
+    // text: payload.text || "",
+  html: payload.html || "",
+    // content: [
+    //   {
+    //     type: payload.html ? 'text/html' : 'text/plain',
+    //     value: payload.html || payload.text || ''
+    //   }
+    // ]
   };
 
   try {

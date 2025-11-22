@@ -9,6 +9,7 @@ import { AppDataSource } from "./config/postgres";
 import { logger } from "./utils/logger";
 import { authContext } from "./middleware/authContext";
 import dotenv from "dotenv";
+import { runAllSeeds } from "./seed";
 
 dotenv.config();
 
@@ -48,6 +49,8 @@ async function bootstrap() {
 
     await server.start();
     server.applyMiddleware({ app });
+
+    await runAllSeeds();
 
     const PORT = process.env.PORT || 4000;
     app.listen(PORT, () => {
