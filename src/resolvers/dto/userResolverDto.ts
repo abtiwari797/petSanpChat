@@ -73,8 +73,11 @@ export class UserResponseDto  {
   isVerified?: boolean;
 }
 
-
-
+@ObjectType()
+export class loginOrSignupWithGoogleResponseDto  {
+     @Field(()=> String)
+    firebaseToken!: string;
+}
 
 
 @ArgsType()
@@ -140,8 +143,6 @@ export class sendPasswordResetEmailResponse extends BaseResponse {
 }
 
 
-
-
 @ArgsType()
 export class GoogleSignupArgs {
   @Field()
@@ -195,6 +196,11 @@ export class VerifyTokenFullResponse extends BaseResponse {
   data?: VerifyTokenResponse;
 }
 
+@ObjectType()
+export class loginOrSignupWithGoogleResponse extends BaseResponse {
+  @Field(() => loginOrSignupWithGoogleResponseDto, { nullable: true })
+  data?: loginOrSignupWithGoogleResponseDto;
+}
 
 @ArgsType()
 export class UpdateProfileInput {

@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { User } from "../entities/User";
 import { logger } from "../utils/logger";
 import dotenv from "dotenv";
+import { MasterLoginType } from "../entities/MasterLoginType";
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ export const AppDataSource = new DataSource({
   type: "postgres",
   url: process.env.DATABASE_URL,
   ssl: false, // <—— important
-  entities: [User],
+  entities: [User,MasterLoginType],
   synchronize: true,
   logging: true,
   

@@ -19,6 +19,7 @@ import {
   VerifyTokenFullResponse,
   sendPasswordResetEmailResponse,
   UpdateProfileInput,
+  loginOrSignupWithGoogleResponse,
 } from "./dto/userResolverDto";
 import { UserOTP } from "../model/userOtpSchema";
 import { VerifyOtpArgs, VerifyOtpResponse } from "./dto/otpResolverDto";
@@ -47,32 +48,32 @@ export class UserResolver {
     }
   }
 
-@Query(() => UserDetailsResponse) // single object
-async getUsersDetails(@Ctx() ctx: any): Promise<UserDetailsResponse> {
-  logger.info(`📊 Query: getUsersDetails`);
-  try {
-    const currentUser = ctx?.currentUser;
-    if (!currentUser) throw new Error("Unauthorized");
+  @Query(() => UserDetailsResponse) // single object
+  async getUsersDetails(@Ctx() ctx: any): Promise<UserDetailsResponse> {
+    logger.info(`📊 Query: getUsersDetails`);
+    try {
+      const currentUser = ctx?.currentUser;
+      if (!currentUser) throw new Error("Unauthorized");
 
-    const userDto: UserResponseDto = {
-      id: currentUser.id!,
-      firstName: currentUser.firstName || "",
-      lastName: currentUser.lastName || "",
-      name: `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim(),
-      email: currentUser.email || "",
-      username: currentUser.username || "",
-      firebaseId: currentUser.firebaseId || "",
-      dob: currentUser.dob || "",
-      phoneNumber: currentUser.phoneNumber || "",
-      isVerified: currentUser.isVerified || false,
-    };
+      const userDto: UserResponseDto = {
+        id: currentUser.id!,
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        name: `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim(),
+        email: currentUser.email || "",
+        username: currentUser.username || "",
+        firebaseId: currentUser.firebaseId || "",
+        dob: currentUser.dob || "",
+        phoneNumber: currentUser.phoneNumber || "",
+        isVerified: currentUser.isVerified || false,
+      };
 
-    return ApiResponse.success([userDto], "User details fetched successfully");
-  } catch (error: any) {
-    logger.error(`❌ getUsersDetails error: ${error.message}`, error);
-    return ApiResponse.error("Internal Server Error", 500);
+      return ApiResponse.success([userDto], "User details fetched successfully");
+    } catch (error: any) {
+      logger.error(`❌ getUsersDetails error: ${error.message}`, error);
+      return ApiResponse.error("Internal Server Error", 500);
+    }
   }
-}
 
 
   @Mutation(() => LoginResponse)
@@ -216,29 +217,35 @@ async getUsersDetails(@Ctx() ctx: any): Promise<UserDetailsResponse> {
     }
   }
 
-  @Mutation(() => UserResponseDto)
-  async signupWithGoogle(
+  @Mutation(() => loginOrSignupWithGoogleResponse)
+  async loginSignupWithGoogle(
     @Args() args: GoogleSignupArgs
-  ): Promise<UserResponseDto> {
-    const user: User = await this.userService.signupWithGoogle(args);
+  ): Promise<loginOrSignupWithGoogleResponse> {
+    try {
+      const data = await this.userService.loginOrSignupWithGoogle(args);
 
-    return {
-      id: user.id,
-      name: user.firstName, // or user.name if you store full name
-      email: user.email,
-    };
+
+      return ApiResponse.success(data, responseMessage.UserLoginSuccess);
+    } catch (err: any) {
+      logger.error(`❌ .loginOrSignupWithGoogle failed: ${err.message}`, err);
+      // ⚠️ Must return here
+      return ApiResponse.error(
+        err.message || responseMessage.failRefreshToken,
+        500
+      );
+    }
   }
 
-    @Mutation(() => UserDetailsResponse)
+  @Mutation(() => UserDetailsResponse)
   async updateProfile(
     @Args() args: UpdateProfileInput, @Ctx() ctx: { currentUser: UserContext | null }
   ): Promise<UserDetailsResponse> {
-  const loginUser = ctx.currentUser;
-     if (!loginUser || !loginUser.isVerified){
-      throw new CustomGraphQLError("Unauthorized",HttpStatusCodes.UNAUTHORIZED);
+    const loginUser = ctx.currentUser;
+    if (!loginUser || !loginUser.isVerified) {
+      throw new CustomGraphQLError("Unauthorized", HttpStatusCodes.UNAUTHORIZED);
     }
 
-    const updateUser: UserResponseDto = await this.userService.updateProfile(loginUser.id,args);
+    const updateUser: UserResponseDto = await this.userService.updateProfile(loginUser.id, args);
 
     const userDto: UserResponseDto = {
       id: updateUser.id!,
@@ -254,7 +261,7 @@ async getUsersDetails(@Ctx() ctx: any): Promise<UserDetailsResponse> {
     };
 
     return ApiResponse.success([userDto], "User details fetched successfully");
-  } catch (error: any) {
+  } catch(error: any) {
     logger.error(`❌ getUsersDetails error: ${error.message}`, error);
     return ApiResponse.error("Internal Server Error", 500);
   }

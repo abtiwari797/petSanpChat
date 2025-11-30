@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, Unique } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Unique, ManyToOne, JoinColumn } from "typeorm";
 import { ObjectType, Field, ID } from "type-graphql";
+import { MasterLoginType } from "./MasterLoginType";
 
 @ObjectType()
 @Entity()
@@ -42,4 +43,12 @@ export class User {
   @Field()
   @Column({ default: false })
   isVerified!: boolean;
+
+  @ManyToOne(() => MasterLoginType)
+  @JoinColumn({ name: "loginTypeId" })
+  loginType?: MasterLoginType;
+
+
+@Column({ nullable: true })
+  loginTypeId?: number;
 }

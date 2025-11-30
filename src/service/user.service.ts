@@ -10,7 +10,7 @@ import { sendEmail } from "../utils/emailService";
 import { OAuth2Client } from "google-auth-library";
 import { UserOTPRepository } from "../repository/UserOTPRepository";
 import { logger } from "../utils/logger";
-import { HttpStatusCodes } from "../utils/constant";
+import { HttpStatusCodes, LoginType } from "../utils/constant";
 import { TemplateService } from "../utils/templateService";
 
 dotenv.config();
@@ -33,17 +33,32 @@ export class UserService {
   }
 
   async createUser(args: SignupArgs) {
-    const { firstName, lastName, username, email, password, dob, phoneNumber } = args;
-
+    const { firstName, lastName, email, password, dob, phoneNumber } = args;
+    let username = args.username;
     logger.info(`🔄 Starting user signup for email: ${email}`);
 
     try {
-      const existing = await this.userRepo.findOne({ where: [{ email }, { username }] });
+      const existing = await this.userRepo.findOne({ where: { email, isVerified: true } });
+      console.log("existing", existing);
       if (existing) {
-        logger.warn(`⚠️ User already exists: ${email}`);
-        throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
+        logger.warn(`⚠️ User already exists: ${email} existing.isVerified ${existing}`, existing.isVerified);
+        if (existing.isVerified) {
+          throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
+        }
+        logger.info(`ℹ️ Existing unverified user. Resending verification OTP to ${email}`);
+        return await this.resendEmailVerificationOtp(email);
+        // throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
       }
 
+
+      // ------- UNIQUE USERNAME GENERATION -------
+      let uniqueUsername = username;
+
+
+      username = await this.generateUniqueUsername(this.userRepo, uniqueUsername)
+
+      logger.info(`✅ Unique username generated: ${uniqueUsername}`);
+      username = uniqueUsername;
       const userRecord = await admin.auth().createUser({ email, password, displayName: `${firstName} ${lastName}` });
       logger.info(`✅ Firebase user created with UID: ${userRecord.uid}`);
 
@@ -68,6 +83,7 @@ export class UserService {
         dob,
         phoneNumber,
         isVerified: false,
+        loginTypeId: LoginType.manualy
       });
       await this.userRepo.save(user);
       logger.info(`✅ User saved to PostgreSQL successfully`);
@@ -85,6 +101,7 @@ export class UserService {
     try {
       const user = await this.userRepo.findOne({ where: { email } });
       if (!user) throw this.createError("User not found. Please sign up first.", HttpStatusCodes.NOT_FOUND); // 404
+      if (user.loginTypeId===LoginType.google) throw this.createError("Force To Change the Password.", HttpStatusCodes.FORCECHANGE_PASSWORD); // 404
 
       if (!user.isVerified) throw this.createError("Email is not verified. Please verify your email first.", HttpStatusCodes.FORBIDDEN); // 403
 
@@ -137,9 +154,9 @@ export class UserService {
     try {
       const resetLink = await admin.auth().generatePasswordResetLink(email);
       const restLinkTemplate = await TemplateService.renderTemplate("petsnapchat_password_reset", {
-  USERNAME: "John Doe",
-  RESET_LINK: resetLink
-});
+        USERNAME: "John Doe",
+        RESET_LINK: resetLink
+      });
       await sendEmail([email], { subject: restLinkTemplate.subject, text: restLinkTemplate.text, html: restLinkTemplate.html });
       return "Password reset link sent to email";
     } catch (err: any) {
@@ -148,34 +165,78 @@ export class UserService {
     }
   }
 
-  async signupWithGoogle(args: GoogleSignupArgs): Promise<User> {
-    logger.info(`🔄 Starting Google signup`);
+  async loginOrSignupWithGoogle(args: GoogleSignupArgs): Promise<{ firebaseToken: string }> {
+    const { idToken, dob, phoneNumber } = args;
+
     try {
-      const { idToken, dob, phoneNumber } = args;
-      const ticket = await client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+      // 1️⃣ Verify Google ID token
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
       const payload = ticket.getPayload();
-      if (!payload || !payload.email) throw this.createError("Google account does not have an email", HttpStatusCodes.BAD_REQUEST);
+      if (!payload || !payload.email) {
+        throw this.createError("Google account has no email", 400);
+      }
 
       const { sub: googleUid, email, name, picture } = payload;
+
+      // 2️⃣ Check PostgreSQL for existing verified user
+      let user = await this.userRepo.findOne({ where: { email, isVerified: true } });
+      if (user) {
+        // Update the loginTypeId
+        user.loginTypeId = LoginType.manualy_google; // set to your desired FK
+
+        // Save the changes
+        await this.userRepo.save(user);
+
+        logger.info(`✅ Updated loginTypeId for user ${email} to ${LoginType.manualy_google}`);
+      }
       let firebaseUser;
       try {
-        firebaseUser = await admin.auth().getUser(googleUid);
+        // Try to get Firebase user by email
+        firebaseUser = await admin.auth().getUserByEmail(email);
       } catch (err: any) {
-        if (err.code === "auth/user-not-found") firebaseUser = await admin.auth().createUser({ uid: googleUid, email, displayName: name, photoURL: picture });
-        else throw err;
+        if (err.code === "auth/user-not-found") {
+          // Create Firebase user if not exists
+          firebaseUser = await admin.auth().createUser({
+            uid: googleUid,
+            email,
+            displayName: name,
+            photoURL: picture,
+          });
+          logger.info(`✅ Firebase user created: ${email}`);
+        } else throw err;
       }
 
-      let user = await this.userRepo.findOne({ where: { email } });
+      // 3️⃣ Create PostgreSQL user if not exists
       if (!user) {
-        user = this.userRepo.create({ firstName: name || "", email, dob, phoneNumber, isVerified: true });
+        user = this.userRepo.create({
+          firebaseId: firebaseUser.uid,
+          firstName: name || "",
+          lastName: "",
+          username: email.split("@")[0],
+          email,
+          dob,
+          phoneNumber,
+          isVerified: true,
+          loginTypeId: LoginType.google
+        });
         await this.userRepo.save(user);
+        logger.info(`✅ User saved in PostgreSQL: ${email}`);
       }
-      return user;
+
+
+      // 4️⃣ Generate custom Firebase token
+      const customToken = await admin.auth().createCustomToken(firebaseUser.uid);
+
+      return { firebaseToken: customToken };
     } catch (error: any) {
-      logger.error(`❌ Google signup failed: ${error.message}`, error);
-      throw this.createError(error.message, error.status || HttpStatusCodes.INTERNAL_SERVER_ERROR);
+      logger.error(`❌ Google login/signup failed: ${error.message}`, error);
+      throw this.createError(error.message, error.status || 500);
     }
   }
+
 
   async resendEmailVerificationOtp(email: string): Promise<{ otp: string }> {
     logger.info(`🔄 Resending email verification OTP for: ${email}`);
@@ -189,7 +250,7 @@ export class UserService {
       const expireAt = Date.now() + ttlMinutes * 60 * 1000;
 
       await UserOTP.create({ userId: email, type: "signup_email_verification", otp, expireAt, createdAt: Date.now() });
-      
+
       return { otp };
     } catch (error: any) {
       logger.error(`❌ Resend OTP failed for ${email}: ${error.message}`, error);
@@ -217,43 +278,75 @@ export class UserService {
     }
   }
 
-async updateProfile(userId: string, input: UpdateProfileInput): Promise<UserResponseDto> {
-  logger.info(`🔄 Updating profile for userId: ${userId}`);
-  try {
-    // 1️⃣ Find user by ID
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) {
-      logger.warn(`⚠️ User not found: ${userId}`);
-      throw this.createError("User not found", HttpStatusCodes.NOT_FOUND);
+  async updateProfile(userId: string, input: UpdateProfileInput): Promise<UserResponseDto> {
+    logger.info(`🔄 Updating profile for userId: ${userId}`);
+    try {
+      // 1️⃣ Find user by ID
+      const user = await this.userRepo.findOne({ where: { id: userId } });
+      if (!user) {
+        logger.warn(`⚠️ User not found: ${userId}`);
+        throw this.createError("User not found", HttpStatusCodes.NOT_FOUND);
+      }
+
+      // 2️⃣ Update only the provided fields
+      if (input.firstName !== undefined) user.firstName = input.firstName;
+      if (input.lastName !== undefined) user.lastName = input.lastName;
+      if (input.dob !== undefined) user.dob = input.dob;
+      if (input.phoneNumber !== undefined) user.phoneNumber = input.phoneNumber;
+
+      // 3️⃣ Save updated user
+      await this.userRepo.save(user);
+      logger.info(`✅ User profile updated successfully: ${userId}`);
+
+      // 4️⃣ Return updated user info
+      return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        username: user.username,
+        phoneNumber: user.phoneNumber,
+        dob: user.dob,
+        isVerified: user.isVerified,
+      };
+    } catch (error: any) {
+      logger.error(`❌ Failed to update profile for ${userId}: ${error.message}`, error);
+      throw this.createError(
+        error.message || "Failed to update profile",
+        error.status || HttpStatusCodes.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+
+  //comman function to generate unique username
+
+  async generateUniqueUsername(
+    userRepo: any,
+    baseUsername: string,
+    maxAttempts = 20
+  ): Promise<string> {
+    let uniqueUsername = baseUsername;
+    let attempts = 0;
+
+    while (true) {
+      const existingUser = await userRepo.findOne({ where: { username: uniqueUsername } });
+      if (!existingUser) break; // Unique → exit loop
+
+      // Generate random 4-digit number
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      uniqueUsername = `${baseUsername}${randomNum}`;
+      attempts++;
+
+      logger.warn(`⚠️ Username exists. Trying: ${uniqueUsername}`);
+
+      if (attempts >= maxAttempts) {
+        throw new Error("Failed to generate unique username after multiple attempts");
+      }
     }
 
-    // 2️⃣ Update only the provided fields
-    if (input.firstName !== undefined) user.firstName = input.firstName;
-    if (input.lastName !== undefined) user.lastName = input.lastName;
-    if (input.dob !== undefined) user.dob = input.dob;
-    if (input.phoneNumber !== undefined) user.phoneNumber = input.phoneNumber;
-
-    // 3️⃣ Save updated user
-    await this.userRepo.save(user);
-    logger.info(`✅ User profile updated successfully: ${userId}`);
-
-    // 4️⃣ Return updated user info
-    return {
-      id: user.id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      username: user.username,
-      phoneNumber: user.phoneNumber,
-      dob: user.dob,
-      isVerified: user.isVerified,
-    };
-  } catch (error: any) {
-    logger.error(`❌ Failed to update profile for ${userId}: ${error.message}`, error);
-    throw this.createError(
-      error.message || "Failed to update profile",
-      error.status || HttpStatusCodes.INTERNAL_SERVER_ERROR
-    );
+    return uniqueUsername;
   }
+
 }
-}
+

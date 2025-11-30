@@ -19,7 +19,8 @@ export const HttpStatusCodes = {
   ACCEPTED: 202,                 // Accepted
   NO_CONTENT: 204,               // No Content
   BAD_REQUEST: 400,              // Bad Request
-  UNAUTHORIZED: 401,             // Unauthorized
+  UNAUTHORIZED: 401, 
+  FORCECHANGE_PASSWORD:428,            // Unauthorized
   FORBIDDEN: 403,                // Forbidden
   NOT_FOUND: 404,                // Not Found
   METHOD_NOT_ALLOWED: 405,       // Method Not Allowed
@@ -32,3 +33,9 @@ export const HttpStatusCodes = {
   GATEWAY_TIMEOUT: 504,  
         // Gateway Timeout
 };
+
+export const LoginType={
+  manualy:1,
+  google:2,
+  manualy_google:3,
+}
