@@ -46,6 +46,7 @@ export class UserService {
           throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
         }
         logger.info(`ℹ️ Existing unverified user. Resending verification OTP to ${email}`);
+        await this.updatePassword(existing.firebaseId!, password);
         return await this.resendEmailVerificationOtp(email);
         // throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
       }
@@ -347,6 +348,24 @@ export class UserService {
 
     return uniqueUsername;
   }
+
+
+async updatePassword(uid: string, newPassword: string): Promise<admin.auth.UserRecord> {
+  try {
+    const userRecord = await admin.auth().updateUser(uid, {
+      password: newPassword
+    });
+
+    console.log("✅ Password updated for user:", userRecord.uid);
+    return userRecord;
+
+  } catch (error) {
+    console.error("❌ Error updating password:", error);
+    throw error;
+  }
+}
+
+
 
 }
 
