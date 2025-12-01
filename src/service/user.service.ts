@@ -38,7 +38,7 @@ export class UserService {
     logger.info(`🔄 Starting user signup for email: ${email}`);
 
     try {
-      const existing = await this.userRepo.findOne({ where: { email, isVerified: true } });
+      const existing = await this.userRepo.findOne({ where: { email } });
       console.log("existing", existing);
       if (existing) {
         logger.warn(`⚠️ User already exists: ${email} existing.isVerified ${existing}`, existing.isVerified);
