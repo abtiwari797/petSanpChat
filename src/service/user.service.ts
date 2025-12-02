@@ -46,7 +46,7 @@ export class UserService {
           throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
         }
         logger.info(`ℹ️ Existing unverified user. Resending verification OTP to ${email}`);
-        await this.updatePassword(existing.firebaseId!, password);
+        // await this.updatePassword(existing.firebaseId!, password);
         return await this.resendEmailVerificationOtp(email);
         // throw this.createError("User already exists", HttpStatusCodes.CONFLICT); // 409
       }
