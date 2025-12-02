@@ -219,13 +219,13 @@ export class UserResolver {
 
     @Query(() => VerifyTokenFullResponse)
   async getProfile(
-    @Args() { idToken }: VerifyTokenArgs
+     @Ctx() ctx: { currentUser: UserContext | null }
   ): Promise<VerifyTokenFullResponse> {
     logger.info(`🔍 Query: verifyToken`);
     try {
-      const result = await this.userService.verifyToken(idToken);
+   const currentUser = ctx?.currentUser;
       // const data = { uid: result.uid, email: result.email };
-      return ApiResponse.success(result, responseMessage.refreshToken);
+      return ApiResponse.success(currentUser, responseMessage.refreshToken);
     } catch (err: any) {
       logger.error(`❌ verifyToken failed: ${err.message}`, err);
       // ⚠️ Must return here
