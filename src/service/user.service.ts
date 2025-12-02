@@ -59,7 +59,7 @@ export class UserService {
       username = await this.generateUniqueUsername(this.userRepo, uniqueUsername)
 
       logger.info(`✅ Unique username generated: ${username}`);
-    
+     logger.info(`✅ password username : ${password}`);
       const userRecord = await admin.auth().createUser({ email, password, displayName: `${firstName} ${lastName}` });
       logger.info(`✅ Firebase user created with UID: ${userRecord.uid}`);
 
