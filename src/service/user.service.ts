@@ -12,6 +12,7 @@ import { UserOTPRepository } from "../repository/UserOTPRepository";
 import { logger } from "../utils/logger";
 import { HttpStatusCodes, LoginType } from "../utils/constant";
 import { TemplateService } from "../utils/templateService";
+import { UserContext } from "../middleware/authContext";
 
 dotenv.config();
 
@@ -126,6 +127,45 @@ export class UserService {
       throw this.createError(error.message, error.status || HttpStatusCodes.INTERNAL_SERVER_ERROR);
     }
   }
+
+async deleteUserProfile(user: UserContext) {
+  logger.info(`🔄 Attempting to delete profile for email: ${user}`);
+
+  try {
+    // 1️⃣ Fetch user from PostgreSQL
+   
+
+    const firebaseUid = user.firebaseId;
+    logger.info(`✅ Firebase login successful for UID: ${firebaseUid}`);
+
+    // 3️⃣ Delete user from Firebase Auth
+    await admin.auth().deleteUser(firebaseUid);
+    logger.info(`✅ Firebase user deleted: ${firebaseUid}`);
+
+    // 4️⃣ Delete user from PostgreSQL
+    await this.userRepo.delete({ firebaseId: firebaseUid });
+    logger.info(`✅ User deleted from PostgreSQL: ${firebaseUid}`);
+
+
+    return {
+      status: true,
+      code: 200,
+      message: "User profile deleted successfully",
+    };
+  } catch (error: any) {
+    logger.error(`❌ Delete profile error for : ${error.message}`, error);
+
+    const firebaseMsg = error.response?.data?.error?.message;
+    if (firebaseMsg)
+      throw this.createError(firebaseMsg, 400);
+
+    throw this.createError(
+      error.message || "Failed to delete profile",
+      error.status || 500
+    );
+  }
+}
+
 
   async verifyToken(idToken: string) {
     logger.info(`🔍 Verifying ID token`);

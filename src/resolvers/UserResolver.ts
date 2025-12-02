@@ -236,6 +236,27 @@ export class UserResolver {
     }
   }
 
+
+      @Query(() => UserDetailsResponse)
+  async deleteProfile(
+     @Ctx() ctx: { currentUser: UserContext | null }
+  ): Promise<UserDetailsResponse> {
+    logger.info(`🔍 Query: verifyToken`);
+    try {
+   const currentUser = ctx?.currentUser;
+     await this.userService.deleteUserProfile(currentUser!);
+      // const data = { uid: result.uid, email: result.email };
+      return ApiResponse.success([currentUser], responseMessage.refreshToken);
+    } catch (err: any) {
+      logger.error(`❌ verifyToken failed: ${err.message}`, err);
+      // ⚠️ Must return here
+      return ApiResponse.error(
+        err.message || responseMessage.failRefreshToken,
+        500
+      );
+    }
+  }
+
   @Mutation(() => loginOrSignupWithGoogleResponse)
   async loginSignupWithGoogle(
     @Args() args: GoogleSignupArgs
