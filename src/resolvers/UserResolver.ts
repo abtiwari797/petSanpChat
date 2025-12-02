@@ -225,7 +225,7 @@ export class UserResolver {
     try {
    const currentUser = ctx?.currentUser;
       // const data = { uid: result.uid, email: result.email };
-      return ApiResponse.success(currentUser, responseMessage.refreshToken);
+      return ApiResponse.success([currentUser], responseMessage.refreshToken);
     } catch (err: any) {
       logger.error(`❌ verifyToken failed: ${err.message}`, err);
       // ⚠️ Must return here
