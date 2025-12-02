@@ -217,10 +217,10 @@ export class UserResolver {
     }
   }
 
-    @Query(() => VerifyTokenFullResponse)
+    @Query(() => UserDetailsResponse)
   async getProfile(
      @Ctx() ctx: { currentUser: UserContext | null }
-  ): Promise<VerifyTokenFullResponse> {
+  ): Promise<UserDetailsResponse> {
     logger.info(`🔍 Query: verifyToken`);
     try {
    const currentUser = ctx?.currentUser;
