@@ -146,7 +146,7 @@ async deleteUserProfile(user: UserContext) {
     await this.userRepo.delete({ firebaseId: firebaseUid });
     logger.info(`✅ User deleted from PostgreSQL: ${firebaseUid}`);
 
-
+  await this.deleteAllUsers()
     return {
       status: true,
       code: 200,
@@ -163,6 +163,67 @@ async deleteUserProfile(user: UserContext) {
       error.message || "Failed to delete profile",
       error.status || 500
     );
+  }
+}
+async deleteAllUsers() {
+  logger.info("🗑️ Starting full user deletion process...");
+
+  try {
+    // -----------------------------------------
+    // 1️⃣ FETCH ALL FIREBASE USERS
+    // -----------------------------------------
+    let nextPageToken: string | undefined = undefined;
+    const firebaseUIDs: string[] = [];
+
+    do {
+      const listUsersResult = await admin.auth().listUsers(1000, nextPageToken);
+
+      listUsersResult.users.forEach(user => {
+        firebaseUIDs.push(user.uid);
+      });
+
+      nextPageToken = listUsersResult.pageToken;
+    } while (nextPageToken);
+
+    logger.info(`🔍 Total Firebase users found: ${firebaseUIDs.length}`);
+
+
+    // -----------------------------------------
+    // 2️⃣ DELETE USERS FROM FIREBASE IN BATCHES
+    // -----------------------------------------
+    const batchSize = 100;
+    for (let i = 0; i < firebaseUIDs.length; i += batchSize) {
+      const batch = firebaseUIDs.slice(i, i + batchSize);
+      const result = await admin.auth().deleteUsers(batch);
+
+      logger.info(
+        `🔥 Firebase batch deleted: ${batch.length}, success: ${result.successCount}, failed: ${result.failureCount}`
+      );
+    }
+
+    logger.info("✅ All Firebase users deleted successfully");
+
+
+    // -----------------------------------------
+    // 3️⃣ DELETE FROM POSTGRESQL users TABLE
+    // -----------------------------------------
+    await this.userRepo.createQueryBuilder().delete().from(User).execute();
+    logger.info("🗑️ All users deleted from PostgreSQL table successfully");
+
+
+    // -----------------------------------------
+    // 4️⃣ DELETE OTP TABLE (optional)
+    // -----------------------------------------
+     await UserOTP.deleteMany({});
+
+    logger.info("🗑️ All OTP records deleted successfully");
+
+
+    return { success: true, message: "All users deleted from Firebase + PostgreSQL" };
+
+  } catch (error: any) {
+    logger.error(`❌ Error deleting all users: ${error.message}`, error);
+    throw this.createError(error.message, error.status || HttpStatusCodes.INTERNAL_SERVER_ERROR);
   }
 }
 
