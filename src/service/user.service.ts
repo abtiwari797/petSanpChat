@@ -109,7 +109,7 @@ export class UserService {
        logger.info(`🔄 user Found Force To Change the Password}`);
 
       if (!user.isVerified) throw this.createError("Email is not verified. Please verify your email first.", HttpStatusCodes.FORBIDDEN); // 403
-    logger.info(`🔄 user isVerified ${ email, password}`);
+    logger.info(`🔄 user isVerified ${  password} ${email}`);
       const response = await axios.post(
         `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
         { email, password, returnSecureToken: true }
