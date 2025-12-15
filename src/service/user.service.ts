@@ -103,10 +103,13 @@ export class UserService {
     try {
       const user = await this.userRepo.findOne({ where: { email } });
       if (!user) throw this.createError("User not found. Please sign up first.", HttpStatusCodes.NOT_FOUND); // 404
+       logger.info(`🔄 user Found}`);
+
       if (user.loginTypeId===LoginType.google) throw this.createError("Force To Change the Password.", HttpStatusCodes.FORCECHANGE_PASSWORD); // 404
+       logger.info(`🔄 user Found Force To Change the Password}`);
 
       if (!user.isVerified) throw this.createError("Email is not verified. Please verify your email first.", HttpStatusCodes.FORBIDDEN); // 403
-
+    logger.info(`🔄 user isVerified ${ email, password}`);
       const response = await axios.post(
         `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
         { email, password, returnSecureToken: true }
