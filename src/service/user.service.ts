@@ -98,7 +98,7 @@ export class UserService {
   }
 
   async login(email: string, password: string) {
-    logger.info(`🔄 Login attempt for email: ${email}`);
+    logger.info(`🔄 Login attempt for email: ${email} ${password}`);
 
     try {
       const user = await this.userRepo.findOne({ where: { email } });
